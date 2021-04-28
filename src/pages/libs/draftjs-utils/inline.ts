@@ -1,5 +1,6 @@
 import {
   ContentBlock,
+  convertToRaw,
   DraftStyleMap,
   EditorState,
   Modifier,
@@ -228,11 +229,13 @@ interface ChangeOriginalStyleToNeweStyle {
   editorState: EditorState;
   originalStyle: StyleKeyType;
   newStyle?: StyleKeyType;
+  blockKey?: string;
   startOffset?: number;
   endOffset?: number;
 }
 
 export const changeOriginalStyleToNeweStyle = ({
+  blockKey,
   editorState,
   originalStyle,
   newStyle,
@@ -240,7 +243,15 @@ export const changeOriginalStyleToNeweStyle = ({
   endOffset,
 }: ChangeOriginalStyleToNeweStyle): EditorState => {
   const selectionState = editorState.getSelection();
+  const originalSelection = selectionState.merge({
+    anchorKey: selectionState.getAnchorKey(),
+    focusKey: selectionState.getFocusKey(),
+    anchorOffset: selectionState.getAnchorOffset(),
+    focusOffset: selectionState.getFocusOffset(),
+  });
+
   const newSelection = selectionState.merge({
+    focusKey: blockKey,
     anchorOffset: startOffset,
     focusOffset: endOffset,
   });
@@ -257,18 +268,18 @@ export const changeOriginalStyleToNeweStyle = ({
 
   let editorStateWithNewStyle;
 
-  if (newStyle != null) {
+  if (newStyle == null) {
+    editorStateWithNewStyle = editorStateWithToggleOriginalStyle;
+  } else {
     editorStateWithNewStyle = RichUtils.toggleInlineStyle(
       editorStateWithToggleOriginalStyle,
       newStyle,
     );
-  } else {
-    editorStateWithNewStyle = editorStateWithToggleOriginalStyle;
   }
 
   const editorStateWithNewStyleAndPreviousSelection = EditorState.forceSelection(
     editorStateWithNewStyle,
-    selectionState,
+    originalSelection,
   );
 
   return editorStateWithNewStyleAndPreviousSelection;
